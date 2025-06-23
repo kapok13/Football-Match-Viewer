@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name" translatable="false">Football Match Viewer</string>
+    <string name="matches_today">Matches Today</string>
+    <string name="policy">Policy</string>
+    <string name="settings">Settings</string>
+    <string name="dark_theme">Dark Theme</string>
+    <string name="back">Back</string>
+</resources>
