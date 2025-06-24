@@ -29,6 +29,7 @@ class MainViewModel(
                 when (it) {
                     is MainMvi.Intent.Load -> loadFixtures()
                     is MainMvi.Intent.Refresh -> refreshFromNetwork()
+                    is MainMvi.Intent.SortFixturesByTimestamp -> sortFixturesOrder(it.isAscending)
                 }
             }
         }
@@ -36,16 +37,36 @@ class MainViewModel(
         startAutoRefresh()
     }
 
-    private fun loadFixtures() {
+    private fun sortFixturesOrder(isAscending: Boolean) {
+        _state.update {
+            it.copy(
+                sortedAscending = isAscending
+            )
+        }
+        loadFixtures(true)
+    }
+
+    private fun loadFixtures(sorting: Boolean = false) {
         viewModelScope.launch {
             _state.update { it.copy(loading = true) }
-            launch { refreshFromNetwork() }
+            if (sorting.not()) {
+                launch { refreshFromNetwork() }
+            }
 
             try {
                 footballDatabaseRepository.getFixtures().collect { cachedMatches ->
+                    val sortedMatches = cachedMatches
+                        .map { it.toUiFixtures() }
+                        .let { matches ->
+                            if (state.value.sortedAscending == false) {
+                                matches.sortedByDescending { it.timestamp }
+                            } else {
+                                matches.sortedBy { it.timestamp }
+                            }
+                        }
                     _state.update {
                         it.copy(
-                            fixtures = cachedMatches.map { it.toUiFixtures() },
+                            fixtures = sortedMatches,
                             loading = false
                         )
                     }

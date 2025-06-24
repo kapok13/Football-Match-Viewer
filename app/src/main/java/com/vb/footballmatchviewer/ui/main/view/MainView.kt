@@ -15,19 +15,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.swiperefresh.SwipeRefresh
 import com.google.accompanist.swiperefresh.SwipeRefreshState
+import com.vb.footballmatchviewer.R
 import com.vb.footballmatchviewer.ui.main.mvi.MainMvi
 import com.vb.footballmatchviewer.ui.main.viewmodel.MainViewModel
 import com.vb.footballmatchviewer.ui.model.Fixture
@@ -39,6 +50,7 @@ const val MAIN_VIEW_ROUTE = "MAIN_VIEW"
 @Composable
 fun MainView(viewmodel: MainViewModel = koinViewModel(), innerPaddings: PaddingValues) {
     val uiState by viewmodel.state.collectAsState()
+    var sortMenuExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.loading) {
@@ -48,15 +60,58 @@ fun MainView(viewmodel: MainViewModel = koinViewModel(), innerPaddings: PaddingV
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
-            SwipeRefresh(
-                state = SwipeRefreshState(uiState.loading),
-                onRefresh = { viewmodel.sendIntent(MainMvi.Intent.Refresh) },
-            ) {
-                LazyColumn(modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPaddings)) {
-                    items(uiState.fixtures.orEmpty()) { fixture ->
-                        FixtureItem(fixture)
+            Column(modifier = Modifier.fillMaxSize().padding(innerPaddings)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(12.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    Box {
+                        IconButton(onClick = { sortMenuExpanded = true },  modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                imageVector = ImageVector.vectorResource(R.drawable.outline_filter_list_24),
+                                contentDescription = stringResource(R.string.sort),
+                                modifier = Modifier.size(32.dp),
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = sortMenuExpanded,
+                            onDismissRequest = { sortMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.by_ascending)) },
+                                onClick = {
+                                    sortMenuExpanded = false
+                                    if (uiState.sortedAscending == false) {
+                                        viewmodel.sendIntent(MainMvi.Intent.SortFixturesByTimestamp(true))
+                                    }
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.by_descending)) },
+                                onClick = {
+                                    sortMenuExpanded = false
+                                    if (uiState.sortedAscending) {
+                                        viewmodel.sendIntent(MainMvi.Intent.SortFixturesByTimestamp(false))
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+                SwipeRefresh(
+                    state = SwipeRefreshState(uiState.loading),
+                    onRefresh = { viewmodel.sendIntent(MainMvi.Intent.Refresh) },
+                ) {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        items(uiState.fixtures.orEmpty()) { fixture ->
+                            FixtureItem(fixture)
+                        }
                     }
                 }
             }
